@@ -1,29 +1,31 @@
 {
-  "author": "Tom Carden <tom@tom-carden.co.uk>",
-  "contributors": [
-    "Robert Sköld <robert@publicclass.se> (http://publicclass.se)"
-  ],
-  "name": "ejs-locals",
-  "description": "Express 3.x locals for layout, partial and blocks.",
-  "version": "1.0.2",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/randometc/ejs-locals.git"
-  },
-  "homepage": "https://github.com/randometc/ejs-locals",
-  "engines": {
-    "node": ">=0.6.0"
-  },
-  "dependencies": {
-    "ejs": "0.8.x"
-  },
-  "devDependencies": {
-    "express": "~3.0.0",
-    "mocha": "*",
-    "should": "*",
-    "methods": "0.0.1"
-  },
-  "scripts": {
-    "test": "mocha -r should -R spec"
-  }
+	"author": "Ilya Zdesenko <iplugin@gmail.com>",
+	"contributors": [
+		"Tom Carden <tom@tom-carden.co.uk>",
+		"Robert Sköld <robert@publicclass.se> (http://publicclass.se)"
+	],
+	"name": "ejs-loft",
+	"description": "Express.js locals fork with freshest dependencies.",
+	"version": "0.0.2",
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/izdesenko/ejs-loft.git"
+	},
+	"homepage": "https://github.com/izdesenko/ejs-loft",
+	"engines": {
+		"node": ">=4.0"
+	},
+	"dependencies": {
+		"ejs": "latest"
+	},
+	"devDependencies": {
+		"express": "latest",
+		"mocha": "latest",
+		"should": "latest",
+		"methods": "latest"
+	},
+	"scripts": {
+		"test": "mocha -r should -R spec"
+	}
 }
+
