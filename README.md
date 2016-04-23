@@ -1,6 +1,6 @@
 # ejs-loft
 
-## Status
+## About
 
 This library is fork of Tom Carden's ejs-locals module. Just latest ejs engine.
 All functions and documentation for ejs-locals should work.
