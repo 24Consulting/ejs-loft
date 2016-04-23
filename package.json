@@ -4,6 +4,7 @@
 		"Tom Carden <tom@tom-carden.co.uk>",
 		"Robert Sköld <robert@publicclass.se> (http://publicclass.se)"
 	],
+	"license": "MIT",
 	"name": "ejs-loft",
 	"description": "Express.js locals fork with freshest dependencies.",
 	"version": "0.0.2",
