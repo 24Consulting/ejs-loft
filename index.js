@@ -1,139 +1,74 @@
-var ejs = require('ejs')
-  , fs = require('fs')
-  , path = require('path')
-  , exists = fs.existsSync || path.existsSync
-  , resolve = path.resolve
-  , extname = path.extname
-  , dirname = path.dirname
-  , join = path.join
-  , basename = path.basename;
+var ejs = require('ejs'),
+	fs = require('fs'),
+	path = require('path'),
+	exists = fs.existsSync || path.existsSync,
+	resolve = path.resolve,
+	extname = path.extname,
+	dirname = path.dirname,
+	join = path.join,
+	basename = path.basename;
 
-/**
- * Express 3.x Layout & Partial support for EJS.
- *
- * The `partial` feature from Express 2.x is back as a template engine,
- * along with support for `layout` and `block/script/stylesheet`.
- *
- *
- * Example index.ejs:
- *
- *   <% layout('boilerplate') %>
- *   <h1>I am the <%=what%> template</h1>
- *   <% script('foo.js') %>
- *
- *
- * Example boilerplate.ejs:
- *
- *   <html>
- *     <head>
- *       <title>It's <%=who%></title>
- *       <%-scripts%>
- *     </head>
- *     <body><%-body%></body>
- *   </html>
- *
- *
- * Sample app:
- *
- *    var express = require('express')
- *      , app = express();
- *
- *    // use ejs-locals for all ejs templates:
- *    app.engine('ejs', require('ejs-locals'));
- *
- *    // render 'index' into 'boilerplate':
- *    app.get('/',function(req,res,next){
- *      res.render('index', { what: 'best', who: 'me' });
- *    });
- *
- *    app.listen(3000);
- *
- * Example output for GET /:
- *
- *   <html>
- *     <head>
- *       <title>It's me</title>
- *       <script src="foo.js"></script>
- *     </head>
- *     <body><h1>I am the best template</h1></body>
- *   </html>
- *
- */
+var renderFile = module.exports = function(file,options,fn){
 
-var renderFile = module.exports = function(file, options, fn){
+	if (!options.blocks) {
+		var blocks = {
+			scripts: new Block(),
+			stylesheets: new Block()
+		};
+		options.blocks = blocks;
+		options.scripts = blocks.scripts;
+		options.stylesheets = blocks.stylesheets;
+		options.block = block.bind(blocks);
+		options.stylesheet = stylesheet.bind(blocks.stylesheets);
+		options.script = script.bind(blocks.scripts);
+	}
+	
+	options.layout = layout.bind(options);
+	options.partial = partial.bind(options);
 
-  // Express used to set options.locals for us, but now we do it ourselves
-  // (EJS does some __proto__ magic to expose these funcs/values in the template)
-  if (!options.locals) {
-    options.locals = {};
-  }
+	ejs.renderFile(file, options, function(err, html) {
 
-  if (!options.locals.blocks) {
-    // one set of blocks no matter how often we recurse
-    var blocks = { scripts: new Block(), stylesheets: new Block() };
-    options.locals.blocks = blocks;
-    options.locals.scripts = blocks.scripts;
-    options.locals.stylesheets = blocks.stylesheets;
-    options.locals.block = block.bind(blocks);
-    options.locals.stylesheet = stylesheet.bind(blocks.stylesheets);
-    options.locals.script = script.bind(blocks.scripts);
-  }
-  // override locals for layout/partial bound to current options
-  options.locals.layout  = layout.bind(options);
-  options.locals.partial = partial.bind(options);
+		if (err) {
+			return fn(err, html);
+		}
 
-  ejs.renderFile(file, options, function(err, html) {
+		var layout = options._layoutFile;
 
-    if (err) {
-      return fn(err,html);
-    }
+		if (layout) {
 
-    var layout = options.locals._layoutFile;
+			// use default extension
+			var engine = options.settings['view engine'] || 'ejs',
+				desiredExt = '.' + engine;
 
-    // for backward-compatibility, allow options to
-    // set a default layout file for the view or the app
-    // (NB:- not called `layout` any more so it doesn't
-    // conflict with the layout() function)
-    if (layout === undefined) {
-      layout = options._layoutFile;
-    }
+			// apply default layout if only "true" was set
+			if (layout === true) {
+				layout = path.sep + 'layout' + desiredExt;
+			}
+			if (extname(layout) !== desiredExt) {
+				layout += desiredExt;
+			}
 
-    if (layout) {
+			// clear to make sure we don't recurse forever (layouts can be nested)
+			delete options._layoutFile;
+			// make sure caching works inside ejs.renderFile/render
+			delete options.filename;
 
-      // use default extension
-      var engine = options.settings['view engine'] || 'ejs',
-          desiredExt = '.'+engine;
+			if (layout.length > 0 && layout[0] === path.sep) {
+				// if layout is an absolute path, find it relative to view options:
+				layout = join(options.settings.views, layout.slice(1));
+			} else {
+				// otherwise, find layout path relative to current template:
+				layout = resolve(dirname(file), layout);
+			}
 
-      // apply default layout if only "true" was set
-      if (layout === true) {
-        layout = path.sep + 'layout' + desiredExt;
-      }
-      if (extname(layout) !== desiredExt) {
-        layout += desiredExt;
-      }
-
-      // clear to make sure we don't recurse forever (layouts can be nested)
-      delete options.locals._layoutFile;
-      delete options._layoutFile;
-      // make sure caching works inside ejs.renderFile/render
-      delete options.filename;
-
-      if (layout.length > 0 && layout[0] === path.sep) {
-        // if layout is an absolute path, find it relative to view options:
-        layout = join(options.settings.views, layout.slice(1));
-      } else {
-        // otherwise, find layout path relative to current template:
-        layout = resolve(dirname(file), layout);
-      }
-
-      // now recurse and use the current result as `body` in the layout:
-      options.locals.body = html;
-      renderFile(layout, options, fn);
-    } else {
-      // no layout, just do the default:
-      fn(null, html);
-    }
-  });
+			// now recurse and use the current result as `body` in the layout:
+			options.body = html;
+			renderFile(layout, options, fn);
+		} else {
+			// no layout, just do the default:
+			fn(null, html);
+		}
+	});
 
 };
 
@@ -157,16 +92,16 @@ var cache = {};
  * @api private
  */
 
-function resolveObjectName(view){
-  return cache[view] || (cache[view] = view
-    .split('/')
-    .slice(-1)[0]
-    .split('.')[0]
-    .replace(/^_/, '')
-    .replace(/[^a-zA-Z0-9 ]+/g, ' ')
-    .split(/ +/).map(function(word, i){
-      return i ? word[0].toUpperCase() + word.substr(1) : word;
-    }).join(''));
+function resolveObjectName(view) {
+	return cache[view] || (cache[view] = view
+		.split('/')
+		.slice(-1)[0]
+		.split('.')[0]
+		.replace(/^_/, '')
+		.replace(/[^a-zA-Z0-9 ]+/g, ' ')
+		.split(/ +/).map(function(word, i) {
+			return i ? word[0].toUpperCase() + word.substr(1) : word;
+		}).join(''));
 }
 
 /**
@@ -189,46 +124,46 @@ function resolveObjectName(view){
  * @api private
  */
 
-function lookup(root, partial, options){
+function lookup(root, partial, options) {
 
-  var engine = options.settings['view engine'] || 'ejs'
-    , desiredExt = '.' + engine
-    , ext = extname(partial) || desiredExt
-    , key = [ root, partial, ext ].join('-');
+	var engine = options.settings['view engine'] || 'ejs',
+		desiredExt = '.' + engine,
+		ext = extname(partial) || desiredExt,
+		key = [root, partial, ext].join('-');
 
-  if (options.cache && cache[key]) return cache[key];
+	if (options.cache && cache[key]) return cache[key];
 
-  // Make sure we use dirname in case of relative partials
-  // ex: for partial('../user') look for /path/to/root/../user.ejs
-  var dir = dirname(partial)
-    , base = basename(partial, ext);
+	// Make sure we use dirname in case of relative partials
+	// ex: for partial('../user') look for /path/to/root/../user.ejs
+	var dir = dirname(partial),
+		base = basename(partial, ext);
 
-  // _ prefix takes precedence over the direct path
-  // ex: for partial('user') look for /root/_user.ejs
-  partial = resolve(root, dir,'_'+base+ext);
-  if( exists(partial) ) return options.cache ? cache[key] = partial : partial;
+	// _ prefix takes precedence over the direct path
+	// ex: for partial('user') look for /root/_user.ejs
+	partial = resolve(root, dir, '_' + base + ext);
+	if (exists(partial)) return options.cache ? cache[key] = partial : partial;
 
-  // Try the direct path
-  // ex: for partial('user') look for /root/user.ejs
-  partial = resolve(root, dir, base+ext);
-  if( exists(partial) ) return options.cache ? cache[key] = partial : partial;
+	// Try the direct path
+	// ex: for partial('user') look for /root/user.ejs
+	partial = resolve(root, dir, base + ext);
+	if (exists(partial)) return options.cache ? cache[key] = partial : partial;
 
-  // Try index
-  // ex: for partial('user') look for /root/user/index.ejs
-  partial = resolve(root, dir, base, 'index'+ext);
-  if( exists(partial) ) return options.cache ? cache[key] = partial : partial;
+	// Try index
+	// ex: for partial('user') look for /root/user/index.ejs
+	partial = resolve(root, dir, base, 'index' + ext);
+	if (exists(partial)) return options.cache ? cache[key] = partial : partial;
 
-  // FIXME:
-  // * there are other path types that Express 2.0 used to support but
-  //   the structure of the lookup involved View class methods that we
-  //   don't have access to any more
-  // * we probaly need to pass the Express app's views folder path into
-  //   this function if we want to support finding partials relative to
-  //   it as well as relative to the current view
-  // * we have no tests for finding partials that aren't relative to
-  //   the calling view
+	// FIXME:
+	// * there are other path types that Express 2.0 used to support but
+	//   the structure of the lookup involved View class methods that we
+	//   don't have access to any more
+	// * we probaly need to pass the Express app's views folder path into
+	//   this function if we want to support finding partials relative to
+	//   it as well as relative to the current view
+	// * we have no tests for finding partials that aren't relative to
+	//   the calling view
 
-  return null;
+	return null;
 }
 
 
@@ -244,7 +179,6 @@ function lookup(root, partial, options){
  *   - `as` Variable name for each `collection` value, defaults to the view name.
  *     * as: 'something' will add the `something` local variable
  *     * as: this will use the collection value as the template context
- *     * as: global will merge the collection value's properties with `locals`
  *
  *   - `collection` Array of objects, the name is derived from the view name itself.
  *     For example _video.html_ will have a object _video_ available to it.
@@ -255,131 +189,112 @@ function lookup(root, partial, options){
  * @api private
  */
 
-function partial(view, options){
+function partial(view, options) {
 
-  var collection
-    , object
-    , locals
-    , name;
+	var collection, object, name;
+	
+	// parse options
+	if (options) {
+		// collection
+		if (options.collection) {
+			collection = options.collection;
+			delete options.collection;
+		} else if ('length' in options) {
+			collection = options;
+			options = {};
+		}
 
-  // parse options
-  if( options ){
-    // collection
-    if( options.collection ){
-      collection = options.collection;
-      delete options.collection;
-    } else if( 'length' in options ){
-      collection = options;
-      options = {};
-    }
+		// object
+		if ('Object' != options.constructor.name) {
+			object = options;
+			options = {};
+		} else if (options.object !== undefined) {
+			object = options.object;
+			delete options.object;
+		}
+	} else {
+		options = {};
+	}
 
-    // locals
-    if( options.locals ){
-      locals = options.locals;
-      delete options.locals;
-    }
+	for (var k in this)
+		options[k] = options[k] || this[k];
 
-    // object
-    if( 'Object' != options.constructor.name ){
-      object = options;
-      options = {};
-    } else if( options.object !== undefined ){
-      object = options.object;
-      delete options.object;
-    }
-  } else {
-    options = {};
-  }
+	// extract object name from view
+	name = options.as || resolveObjectName(view);
 
-  // merge locals into options
-  if( locals )
-    options.__proto__ = locals;
+	// find view, relative to this filename
+	// (FIXME: filename is set by ejs engine, other engines may need more help)
+	var root = dirname(options.filename),
+		file = lookup(root, view, options),
+		key = file + ':string';
+	if (!file)
+		throw new Error('Could not find partial ' + view);
 
-  // merge app locals into options
-  for(var k in this)
-    options[k] = options[k] || this[k];
+	// read view
+	var source = options.cache ? cache[key] || (cache[key] = fs.readFileSync(file, 'utf8')) : fs.readFileSync(file, 'utf8');
 
-  // extract object name from view
-  name = options.as || resolveObjectName(view);
+	options.filename = file;
 
-  // find view, relative to this filename
-  // (FIXME: filename is set by ejs engine, other engines may need more help)
-  var root = dirname(options.filename)
-    , file = lookup(root, view, options)
-    , key = file + ':string';
-  if( !file )
-    throw new Error('Could not find partial ' + view);
+	// re-bind partial for relative partial paths
+	options.partial = partial.bind(options);
 
-  // read view
-  var source = options.cache
-    ? cache[key] || (cache[key] = fs.readFileSync(file, 'utf8'))
-    : fs.readFileSync(file, 'utf8');
+	// render partial
+	function render() {
+		if (object) {
+			if ('string' == typeof name) {
+				options[name] = object;
+			} else if (name === global) {
+				// wtf?
+				// merge(options, object);
+			}
+		}
+		// TODO Support other templates (but it's sync now...)
+		var html = ejs.render(source, options);
+		return html;
+	}
 
-  options.filename = file;
+	// Collection support
+	if (collection) {
+		var len = collection.length,
+			buf = '',
+			keys, prop, val, i;
 
-  // re-bind partial for relative partial paths
-  options.partial = partial.bind(options);
+		if ('number' == typeof len || Array.isArray(collection)) {
+			options.collectionLength = len;
+			for (i = 0; i < len; ++i) {
+				val = collection[i];
+				options.firstInCollection = i === 0;
+				options.indexInCollection = i;
+				options.lastInCollection = i === len - 1;
+				object = val;
+				buf += render();
+			}
+		} else {
+			keys = Object.keys(collection);
+			len = keys.length;
+			options.collectionLength = len;
+			options.collectionKeys = keys;
+			for (i = 0; i < len; ++i) {
+				prop = keys[i];
+				val = collection[prop];
+				options.keyInCollection = prop;
+				options.firstInCollection = i === 0;
+				options.indexInCollection = i;
+				options.lastInCollection = i === len - 1;
+				object = val;
+				buf += render();
+			}
+		}
 
-  // render partial
-  function render(){
-    if (object) {
-      if ('string' == typeof name) {
-        options[name] = object;
-      } else if (name === global) {
-        // wtf?
-        // merge(options, object);
-      }
-    }
-    // TODO Support other templates (but it's sync now...)
-    var html = ejs.render(source, options);
-    return html;
-  }
-
-  // Collection support
-  if (collection) {
-    var len = collection.length
-      , buf = ''
-      , keys
-      , prop
-      , val
-      , i;
-
-    if ('number' == typeof len || Array.isArray(collection)) {
-      options.collectionLength = len;
-      for (i = 0; i < len; ++i) {
-        val = collection[i];
-        options.firstInCollection = i === 0;
-        options.indexInCollection = i;
-        options.lastInCollection = i === len - 1;
-        object = val;
-        buf += render();
-      }
-    } else {
-      keys = Object.keys(collection);
-      len = keys.length;
-      options.collectionLength = len;
-      options.collectionKeys = keys;
-      for (i = 0; i < len; ++i) {
-        prop = keys[i];
-        val = collection[prop];
-        options.keyInCollection = prop;
-        options.firstInCollection = i === 0;
-        options.indexInCollection = i;
-        options.lastInCollection = i === len - 1;
-        object = val;
-        buf += render();
-      }
-    }
-
-    return buf;
-  } else {
-    return render();
-  }
+		return buf;
+	} else {
+		return render();
+	}
 }
 
 /**
  * Apply the given `view` as the layout for the current template,
- * using the current options/locals. The current template will be
+ * using the current options. The current template will be
  * supplied to the given `view` as `body`, along with any `blocks`
  * added by child templates.
  *
@@ -389,27 +304,27 @@ function partial(view, options){
  * @param  {String} view
  * @api private
  */
-function layout(view){
-  this.locals._layoutFile = view;
+function layout(view) {
+	this._layoutFile = view;
 }
 
 function Block() {
-  this.html = [];
+	this.html = [];
 }
 
 Block.prototype = {
-  toString: function() {
-    return this.html.join('\n');
-  },
-  append: function(more) {
-    this.html.push(more);
-  },
-  prepend: function(more) {
-    this.html.unshift(more);
-  },
-  replace: function(instead) {
-    this.html = [ instead ];
-  }
+	toString: function() {
+		return this.html.join('\n');
+	},
+	append: function(more) {
+		this.html.push(more);
+	},
+	prepend: function(more) {
+		this.html.unshift(more);
+	},
+	replace: function(instead) {
+		this.html = [instead];
+	}
 };
 
 /**
@@ -425,32 +340,31 @@ Block.prototype = {
  * @api private
  */
 function block(name, html) {
-  // bound to the blocks object in renderFile
-  var blk = this[name];
-  if (!blk) {
-    // always create, so if we request a
-    // non-existent block we'll get a new one
-    blk = this[name] = new Block();
-  }
-  if (html) {
-    blk.append(html);
-  }
-  return blk;
+	// bound to the blocks object in renderFile
+	var blk = this[name];
+	if (!blk) {
+		// always create, so if we request a
+		// non-existent block we'll get a new one
+		blk = this[name] = new Block();
+	}
+	if (html) {
+		blk.append(html);
+	}
+	return blk;
 }
 
 // bound to scripts Block in renderFile
 function script(path, type) {
-  if (path) {
-    this.append('<script src="'+path+'"'+(type ? 'type="'+type+'"' : '')+'></script>');
-  }
-  return this;
+	if (path) {
+		this.append('<script src="' + path + '"' + (type ? 'type="' + type + '"' : '') + '></script>');
+	}
+	return this;
 }
 
 // bound to stylesheets Block in renderFile
 function stylesheet(path, media) {
-  if (path) {
-    this.append('<link rel="stylesheet" href="'+path+'"'+(media ? 'media="'+media+'"' : '')+' />');
-  }
-  return this;
+	if (path) {
+		this.append('<link rel="stylesheet" href="' + path + '"' + (media ? 'media="' + media + '"' : '') + ' />');
+	}
+	return this;
 }
-
