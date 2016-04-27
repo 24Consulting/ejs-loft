@@ -1,10 +1,10 @@
+
 {
     "esversion": 6,
     "unused": true,
     "node": true,
 
-    "space_after_anon_function": false,
-    "jslint_happy": false,
+    "space_after_anon_function": true,
 
     "braces_on_own_line": false,
     "brace_style": "expand",
