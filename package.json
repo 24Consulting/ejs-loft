@@ -17,7 +17,8 @@
 		"node": ">=4.0"
 	},
 	"dependencies": {
-		"ejs": "latest"
+		"ejs": "latest",
+		"ejs-locals": "latest"
 	},
 	"devDependencies": {
 		"express": "latest",
