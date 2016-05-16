@@ -9,52 +9,34 @@ var ejs = require('ejs'),
 	basename = path.basename;
 
 module.exports = function renderFile(file, options, fn){
-	if(!options.locals){
-		options.locals = {};   
-	}
-	
-	if(!options.locals.blocks){
+	if(!options.blocks){
 		var blocks = {
 			scripts: new Block(),
 			stylesheets: new Block()
 		};
 		
-		options.locals.blocks = blocks;
-		options.locals.scripts = blocks.scripts;
-		options.locals.stylesheets = blocks.stylesheets;
-		options.locals.block = block.bind(blocks);
-		options.locals.stylesheet = stylesheet.bind(blocks.stylesheets);
-		options.locals.script = script.bind(blocks.scripts);
+		options.blocks = blocks;
+		options.scripts = blocks.scripts;
+		options.stylesheets = blocks.stylesheets;
+		options.block = block.bind(blocks);
+		options.stylesheet = stylesheet.bind(blocks.stylesheets);
+		options.script = script.bind(blocks.scripts);
 	}
 	
-	options.locals.layout = layout.bind(options);
-	options.locals.partial = partial.bind(options);
+	options.layout = layout.bind(options);
+	options.partial = partial.bind(options);
 	
-	ejs.renderFile(file, options, function rf (err, html){
+	ejs.renderFile(file, options, function rf(err, html){
+		if(err) return fn(err, html);
 		
-		if(err){
-			return fn(err, html);
-		}
-		
-		var layout = options.locals._layoutFile;
+		var layout = options._layoutFile;
 		
 		if(layout){
-			layout = options._layoutFile;
-		}
+			var desiredExt = `.${options.settings['view engine'] || 'ejs'}`;
 
-		if(layout){
+			if(layout === true) layout = `${path.sep}layout${desiredExt}`;
+			if(extname(layout) !== desiredExt) layout += desiredExt;
 
-			var engine = options.settings['view engine'] || 'ejs',
-				desiredExt = '.' + engine;
-
-			if(layout === true){
-				layout = path.sep + 'layout' + desiredExt;
-			}
-			if(extname(layout) !== desiredExt){
-				layout += desiredExt;
-			}
-
-			delete options.locals._layoutFile;
 			delete options._layoutFile;
 			delete options.filename;
 
@@ -64,13 +46,12 @@ module.exports = function renderFile(file, options, fn){
 				layout = resolve(dirname(file), layout);
 			}
 
-			options.locals.body = html;
+			options.body = html;
 			renderFile(layout, options, fn);
 		}else{
 			fn(null, html);
 		}
 	});
-
 };
 
 var cache = {};
@@ -89,9 +70,7 @@ function resolveObjectName(view){
 }
 
 function lookup(root, partial, options){
-
-	var engine = options.settings['view engine'] || 'ejs',
-		desiredExt = '.' + engine,
+	var desiredExt = `.${options.settings['view engine'] || 'ejs'}`,
 		ext = extname(partial) || desiredExt,
 		key = [root, partial, ext].join('-');
 
@@ -100,13 +79,14 @@ function lookup(root, partial, options){
 	var dir = dirname(partial),
 		base = basename(partial, ext);
 
-	partial = resolve(root, dir, '_' + base + ext);
+	partial = resolve(root, dir, `_${base}${ext}`);
 	if(exists(partial))return options.cache ? cache[key] = partial : partial;
 
 	partial = resolve(root, dir, base + ext);
 	if(exists(partial))return options.cache ? cache[key] = partial : partial;
 
 	partial = resolve(root, dir, base, 'index' + ext);
+	partial = resolve(root, dir, base, `index${ext}`);
 	if(exists(partial))return options.cache ? cache[key] = partial : partial;
 
 	return null;
@@ -114,8 +94,7 @@ function lookup(root, partial, options){
 
 
 function partial(view, options){
-
-	var collection, object, locals, name;
+	var collection, object, name;
 
 	if(options){
 		if(options.collection){
@@ -124,11 +103,6 @@ function partial(view, options){
 		}else if('length' in options){
 			collection = options;
 			options = {};
-		}
-
-		if(options.locals){
-			locals = options.locals;
-			delete options.locals;
 		}
 
 		if('Object' != options.constructor.name){
@@ -142,9 +116,6 @@ function partial(view, options){
 		options = {};
 	}
 
-	if(locals)
-		options.__proto__ = locals;
-
 	for(var k in this)
 		options[k] = options[k] || this[k];
 
@@ -152,9 +123,9 @@ function partial(view, options){
 
 	var root = dirname(options.filename),
 		file = lookup(root, view, options),
-		key = file + ':string';
-	if(!file)
-		throw new Error('Could not find partial ' + view);
+		key = `${file}:string`;
+	
+	if(!file) throw new Error(`Could not find partial ${view}`);
 
 	var source = options.cache ? cache[key] || (cache[key] = fs.readFileSync(file, 'utf8')) : fs.readFileSync(file, 'utf8');
 
@@ -163,13 +134,9 @@ function partial(view, options){
 	options.partial = partial.bind(options);
 
 	function render(){
-		if(object){
-			if('string' == typeof name){
-				options[name] = object;
-			}else if(name === global){}
-		}
-		var html = ejs.render(source, options);
-		return html;
+		if(object && 'string' == typeof name) options[name] = object;
+		
+		return ejs.render(source, options);
 	}
 
 	if(collection){
@@ -211,7 +178,7 @@ function partial(view, options){
 }
 
 function layout(view){
-	this.locals._layoutFile = view;
+	this._layoutFile = view;
 }
 
 function Block(){
@@ -235,12 +202,10 @@ Block.prototype = {
 
 function block(name, html){
 	var blk = this[name];
-	if(!blk){
-		blk = this[name] = new Block();
-	}
-	if(html){
-		blk.append(html);
-	}
+	
+	if(!blk) blk = this[name] = new Block();
+	if(html) blk.append(html);
+	
 	return blk;
 }
 
@@ -257,3 +222,4 @@ function stylesheet(path, media){
 	}
 	return this;
 }
+
