@@ -7,7 +7,7 @@
 	"license": "MIT",
 	"name": "ejs-loft",
 	"description": "Express.js locals fork with freshest dependencies.",
-	"version": "0.0.3",
+	"version": "0.0.5",
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/izdesenko/ejs-loft.git"
@@ -17,14 +17,14 @@
 		"node": ">=4.0"
 	},
 	"dependencies": {
-		"ejs": "latest",
-		"ejs-locals": "latest"
+		"ejs": "latest"
 	},
 	"devDependencies": {
+		"ejs-locals": "latest",
 		"express": "latest",
+		"methods": "latest",
 		"mocha": "latest",
-		"should": "latest",
-		"methods": "latest"
+		"should": "latest"
 	},
 	"scripts": {
 		"test": "mocha -r should -R spec"

@@ -1,15 +1,12 @@
-<% layout('boilerplate.ejs') -%>
+<% layout('folder/boilerplate.ejs') -%>
 <% js('foo.js') -%>
 <% css('foo.css') -%>
 <h1>I am the <%= what %> template</h1>
 <p class="better-than-dead">I'm red if foo.css was loaded.</p>
 <p>Here are some muppets we know about:<ul>
-<% debugger; %>
-<%-partial('muppet',muppets) %>
+<%-partial('../muppet',muppets) %>
 </ul></p>
-extra::
 <% include extra %>
-after extra::
 <% block('header', "<p>I'm in the header.</p>") -%>
 <% block('footer', "<p>I'm in the footer.</p>") -%>
 
