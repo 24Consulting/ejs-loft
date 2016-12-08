@@ -1,8 +1,11 @@
 var ejs = require('ejs'),
 	fs = require('fs'),
 	path = require('path'),
+	debug = require('debug')('ejs-loft'),
 	exists = fs.existsSync || path.existsSync;
 
+// TODO: fix tests
+// TODO: static files last edited timestamps
 module.exports = function renderFile(file,options,fn){
 	if(!options.blocks){
 		options.blocks = {};
@@ -18,6 +21,8 @@ module.exports = function renderFile(file,options,fn){
 	options.filename = file;
 	
 	ejs.renderFile(file,options,function rf(err,html){
+		debug(file,options,html);
+		
 		if(err) return fn(err,html);
 		
 		var layout = options._layoutFile;
@@ -26,10 +31,7 @@ module.exports = function renderFile(file,options,fn){
 			delete options._layoutFile;
 			delete options.filename;
 			
-			[path.dirname(file),options.settings.views].find(p => {
-				var l = lookup(p,layout,options);
-				if(exists(l)) return layout = l;
-			});
+			layout = findProcess([options.settings.views,path.dirname(file)],p => lookup(p,layout,options));
 			
 			options.body = html;
 			renderFile(layout,options,fn);
@@ -39,33 +41,29 @@ module.exports = function renderFile(file,options,fn){
 	});
 };
 
-var cache = {};
-
-function resolveObjectName(view){
-	return cache[view] || (cache[view] = view
-		.split('/')
-		.slice(-1)[0]
-		.split('.')[0]
-		.replace(/^_/,'')
-		.replace(/[^a-zA-Z0-9 ]+/g,' ')
-		.split(/ +/).map((word,i) => i ? word[0].toUpperCase() + word.substr(1) : word)
-		.join(''));
-}
-
-function lookup(root,partial,options){
-	var ext = path.extname(partial) || `.${options.settings['view engine'] || 'ejs'}`,
-		key = `${root}-${partial}-${ext}`;
+var cache = {},
+	resolveObjectName = view => 
+		cache[view] || (cache[view] = view
+			.split('/')
+			.slice(-1)[0]
+			.split('.')[0]
+			.replace(/^_/,'')
+			.replace(/[^a-zA-Z0-9 ]+/g,' ')
+			.split(/ +/).map((word,i) => i ? word[0].toUpperCase() + word.substr(1) : word)
+			.join('')),
 	
-	if(options.cache && cache[key]) return cache[key];
+	lookup = (root,partial,options) => {
+		var ext = path.extname(partial) || `.${options.settings['view engine'] || 'ejs'}`,
+			key = `${root}-${partial}-${ext}`;
+		
+		if(options.cache && cache[key]) return cache[key];
 
-	var dir = path.dirname(partial),
-		base = path.basename(partial,ext);
+		var dir = path.dirname(partial),
+			base = path.basename(partial,ext);
 
-	partial = path.resolve(root,dir,base + ext);
-	if(exists(partial)) return options.cache ? cache[key] = partial : partial;
-
-	return null;
-}
+		partial = path.resolve(root,dir,base + ext);
+		if(exists(partial)) return options.cache ? cache[key] = partial : partial;
+	};
 
 function partial(view,options){
 	var collection,object,name;
@@ -98,7 +96,7 @@ function partial(view,options){
 	
 	var file;
 	
-	if(![path.dirname(options.filename),options.settings.views].find(r => file = lookup(r,view,options)))
+	if(![options.settings.views,path.dirname(options.filename)].find(r => file = lookup(r,view,options)))
 		throw new Error(`Could not find partial ${view}`);
 	var key = `${file}:string`;
 	
@@ -149,6 +147,12 @@ function partial(view,options){
 	}else{
 		return render();
 	}
+}
+
+function findProcess(list,cb){
+	var res;
+	list.find(i => res = cb(i));
+	return res;
 }
 
 function layout(view){
@@ -203,7 +207,5 @@ function js(){
 		if(typeof script == 'string') script = {src:script};
 		this.append(`<script ${attributes(script)}></script>`);
 	}
-	
-	return this;
 }
 

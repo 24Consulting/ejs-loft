@@ -6,8 +6,8 @@
 	],
 	"license": "MIT",
 	"name": "ejs-loft",
-	"description": "Express.js locals fork with freshest dependencies.",
-	"version": "0.0.5",
+	"description": "Express.js locals fork with freshest ejs inside.",
+	"version": "0.1.0",
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/izdesenko/ejs-loft.git"
