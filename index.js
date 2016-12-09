@@ -42,8 +42,8 @@ module.exports = function renderFile(file,options,fn){
 };
 
 var cache = {},
-	resolveObjectName = view => 
-		cache[view] || (cache[view] = view
+	resolveObjectName = view => cache[view]
+		|| (cache[view] = view
 			.split('/')
 			.slice(-1)[0]
 			.split('.')[0]
@@ -53,7 +53,7 @@ var cache = {},
 			.join('')),
 	
 	lookup = (root,partial,options) => {
-		var ext = path.extname(partial) || `.${options.settings['view engine'] || 'ejs'}`,
+		var ext = path.extname(partial) || `.${options.settings['view engine'] || 'html'}`,
 			key = `${root}-${partial}-${ext}`;
 		
 		if(options.cache && cache[key]) return cache[key];
@@ -61,8 +61,10 @@ var cache = {},
 		var dir = path.dirname(partial),
 			base = path.basename(partial,ext);
 
-		partial = path.resolve(root,dir,base + ext);
-		if(exists(partial)) return options.cache ? cache[key] = partial : partial;
+		if(
+			exists(partial = path.resolve(root,dir,base + ext))
+			|| exists(partial = path.resolve(root,dir,base,'index'+ext))
+		) return options.cache ? cache[key] = partial : partial;
 	};
 
 function partial(view,options){
@@ -96,6 +98,7 @@ function partial(view,options){
 	
 	var file;
 	
+	debugger;
 	if(![options.settings.views,path.dirname(options.filename)].find(r => file = lookup(r,view,options)))
 		throw new Error(`Could not find partial ${view}`);
 	var key = `${file}:string`;
