@@ -159,7 +159,9 @@ function findProcess(list,cb){
 }
 
 function layout(view){
-	this._layoutFile = view;
+	var l = this._layoutFile;
+	if(l !== false)
+		this._layoutFile = l || view;
 }
 
 function Block(){
