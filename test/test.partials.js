@@ -2,6 +2,13 @@ var express = require('express'),
 	request = require('./support/http'),
 	
 // Test application
+	log = res => (err,html) => {
+		if(err){
+			console.log(err);
+			res.status(500);
+		}
+		res.end(html || 'ERROR');
+	},
 	app = express(),
 	engine = require('..');
 
@@ -11,11 +18,15 @@ app
 	.set('views',__dirname + '/fixtures')
 	.set('view options',{views:__dirname+'/fixtures'});
 
+app.locals.hello = 'there';
+app.locals._layoutFile = 'layout';
+
 // Test app routing
 app.get('/',(req,res,next) => res.render('index'));
 
 app.get('/blog',(req,res,next) => {
 	res.render('blog/home',{
+		_layoutFile: false,
 		user: {name:'Tom'},
 		posts: [
 			{text:'1',comments:[{text:'1.1'},{text:'1.2'}]},
@@ -24,35 +35,21 @@ app.get('/blog',(req,res,next) => {
 	});
 });
 
-app.get('/no-layout',(req,res,next) => {
-	res.render('index.ejs',{
-		_layoutFile: false
-	});
-});
-
-app.get('/res-locals',(req,res,next) => {
-	res.render('locals.ejs',{
-		hello: 'here'
-	});
-});
+app.get('/res-locals',(req,res,next) => res.render('locals',{hello:'here',_layoutFile:'layout'}));
 
 app.get('/app-locals',(req,res,next) => {
-	res.render('locals.ejs');
+	res.render('locals',log(res));
 });
 
 app.get('/mobile',(req,res,next) => {
-	res.render('index.ejs',{_layoutFile:'mobile'});
-});
-
-app.get('/mobile.ejs',(req,res,next) => {
-	res.render('index.ejs',{_layoutFile:'mobile.ejs'});
+	res.render('index',{_layoutFile:'mobile'});
 });
 
 app.get('/collection/_entry',(req,res,next) => {
-	res.render('collection.ejs',{
-		name: 'entry',
+	res.render('collection',{
+		name: '_entry',
 		list: [{name:'one'},{name:'two'}]
-	});
+	},log(res));
 });
 
 app.get('/collection/thing',(req,res,next) => {
@@ -164,113 +161,121 @@ app.use((err,req,res,next) => {
 
 /*global describe it */
 describe('app',n => {
-	describe('GET /',n => {
-		it('should render with layout - layout.html',done => request(app)
+	describe('Render template. Layout specified in code.',n => {
+		var check = '<html><head><title>ejs-loft</title></head><body><h1>HTMLIndex</h1>\n</body></html>\n';
+		it('Should render with layout - layout.html',done => request(app)
 			.get('/')
 			.end(res => {
 				res.statusCode.should.equal(200);
-				res.body.should.equal('<html><head><title>ejs-loft</title></head><body><h1>HTMLIndex</h1>\n</body></html>\n');
+				res.body.should.equal(check);
 				done();
 			}));
 		it('one more time',done => request(app)
 			.get('/')
 			.end(res => {
 				res.statusCode.should.equal(200);
-				res.body.should.equal('<html><head><title>ejs-loft</title></head><body><h1>HTMLIndex</h1>\n</body></html>\n');
+				res.body.should.equal(check);
 				done();
 			}));
 	});
 	
-	describe('GET /blog',n => {
+	describe('Render partials',n => {
+		var check = '<h1>Tom</h1>\n<ul>\n<li>1<ul>\n<li>1.1</li>\n<li>1.2</li>\n</ul>\n</li>\n<li>2<ul>\n<li>2.1</li>\n<li>2.2</li>\n<li>2.3</li>\n</ul>\n</li>\n</ul>\n\n';
 		it('should render all the fiddly partials',done => request(app)
 			.get('/blog')
 			.end(res => {
 				res.statusCode.should.equal(200);
-				res.body.should.equal('<h1>Tom</h1>\n<ul>\n<li>1<ul>\n<li>1.1</li>\n<li>1.2</li>\n</ul>\n</li>\n<li>2<ul>\n<li>2.1</li>\n<li>2.2</li>\n<li>2.3</li>\n</ul>\n</li>\n</ul>\n\n');
+				res.body.should.equal(check);
 				done();
 			}));
-		it('One more time:: ',done => request(app)
+		it('one more time',done => request(app)
 			.get('/blog')
 			.end(res => {
 				res.statusCode.should.equal(200);
-				res.body.should.equal('<h1>Tom</h1>\n<ul>\n<li>1<ul>\n<li>1.1</li>\n<li>1.2</li>\n</ul>\n</li>\n<li>2<ul>\n<li>2.1</li>\n<li>2.2</li>\n<li>2.3</li>\n</ul>\n</li>\n</ul>\n\n');
+				res.body.should.equal(check);
 				done();
 			}));
 	});
-
-	/*
-	describe('GET /no-layout',n => {
-		it('should render without layout',done => {
-			request(app)
-				.get('/no-layout')
-				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<h1>Index</h1>');
-					done();
-				});
-		});
+	
+	describe('Render template. Layout specified in options.',n => {
+		var check = '<html><head><title>ejs-loft</title></head><body><h1>here</h1>\n</body></html>\n';
+		it('should render "here"',done => request(app)
+			.get('/res-locals')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
+		
+		it('one more time',done => request(app)
+			.get('/res-locals')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
 	});
-
-	describe('GET /res-locals',n => {
-		it('should render "here"',done => {
-			request(app)
-				.get('/res-locals')
-				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>here</h1></body></html>');
-					done();
-				});
-		});
+	
+	describe('Render template. Layout set in app.locals',n => {
+		var check = '<html><head><title>ejs-loft</title></head><body><h1>there</h1>\n</body></html>\n';
+		it('should render "there"',done => request(app)
+			.get('/app-locals')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
+		
+		it('one more time',done => request(app)
+			.get('/app-locals')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
 	});
-
-	describe('GET /app-locals',n => {
-		it('should render "there"',done => {
-			request(app)
-				.get('/app-locals')
-				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>there</h1></body></html>');
-					done();
-				});
-		});
+	
+	describe('Render template. Overwrite layout in options.',n => {
+		var check = '<html><head><title>ejs-loft mobile</title></head><body><h1>HTMLIndex</h1>\n</body></html>\n';
+		it('should render with mobile.html as layout',done => request(app)
+			.get('/mobile')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
+		it('one more time',done => request(app)
+			.get('/mobile')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
 	});
-
-	describe('GET /mobile',n => {
-		it('should render with mobile.ejs as layout',done => {
-			request(app)
-				.get('/mobile')
-				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals mobile</title></head><body><h1>Index</h1></body></html>');
-					done();
-				});
-		});
-	});
-
-	describe('GET /mobile.ejs',n => {
-		it('should render with mobile.ejs as layout',done => {
-			request(app)
-				.get('/mobile.ejs')
-				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals mobile</title></head><body><h1>Index</h1></body></html>');
-					done();
-				});
-		});
-	});
-
+	
 	describe('GET /collection/_entry',n => {
+		var check = '<html><head><title>ejs-loft</title></head><body><ul>\n<li>one</li>\n<li>two</li>\n</ul>\n</body></html>\n';
 		it('should render _entry.ejs for every item with layout.ejs as layout',done => {
 			request(app)
 				.get('/collection/_entry')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><ul><li>one</li><li>two</li></ul></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		it('one more time',done => {
+			request(app)
+				.get('/collection/_entry')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
+	/*
 	describe('GET /collection/thing-path',n => {
 		it('should render thing/index.ejs for every item with layout.ejs as layout',done => {
 			request(app)
