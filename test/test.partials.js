@@ -24,22 +24,18 @@ app.locals._layoutFile = 'layout';
 // Test app routing
 app.get('/',(req,res,next) => res.render('index'));
 
-app.get('/blog',(req,res,next) => {
-	res.render('blog/home',{
-		_layoutFile: false,
-		user: {name:'Tom'},
-		posts: [
-			{text:'1',comments:[{text:'1.1'},{text:'1.2'}]},
-			{text:'2',comments:[{text:'2.1'},{text:'2.2'},{text:'2.3'}]}
-		]
-	});
-});
+app.get('/blog',(req,res,next) => res.render('blog/home',{
+	_layoutFile: false,
+	user: {name:'Tom'},
+	posts: [
+		{text:'1',comments:[{text:'1.1'},{text:'1.2'}]},
+		{text:'2',comments:[{text:'2.1'},{text:'2.2'},{text:'2.3'}]}
+	]
+}));
 
 app.get('/res-locals',(req,res,next) => res.render('locals',{hello:'here',_layoutFile:'layout'}));
 
-app.get('/app-locals',(req,res,next) => {
-	res.render('locals',log(res));
-});
+app.get('/app-locals',(req,res,next) => res.render('locals',log(res)));
 
 app.get('/mobile',(req,res,next) => {
 	res.render('index',{_layoutFile:'mobile'});
@@ -53,37 +49,35 @@ app.get('/collection/_entry',(req,res,next) => {
 });
 
 app.get('/collection/thing',(req,res,next) => {
-	res.render('collection.ejs',{
+	res.render('collection.html',{
 		name: 'thing',
 		list: [{name:'one'},{name:'two'}]
 	});
 });
 
-app.get('/collection/thing-path',(req,res,next) => {
-	res.render('collection.ejs',{
-		name: 'path/to/thing',
-		list: [{name:'one'},{name:'two'}]
-	});
-});
+app.get('/collection/thing-path',(req,res,next) => res.render('collection.html',{
+	name: 'path/to/thing',
+	list: [{name:'one'},{name:'two'}]
+},log(res)));
 
 app.get('/with-layout',(req,res,next) => {
-	res.render('with-layout.ejs');
+	res.render('with-layout');
 });
 
 app.get('/with-layout-override',(req,res,next) => {
-	res.render('with-layout.ejs',{_layoutFile:false});
+	res.render('with-layout',{_layoutFile:false});
 });
 
 app.get('/with-include-here',(req,res,next) => {
-	res.render('with-include.ejs',{_layoutFile:false,hello:'here'});
+	res.render('with-include',{_layoutFile:false,hello:'here'});
 });
 
 app.get('/with-include-chain',(req,res,next) => {
-	res.render('with-include-chain.ejs',{_layoutFile:false,hello:'chain'});
+	res.render('with-include-chain',{_layoutFile:false,hello:'chain'});
 });
 
 app.get('/with-include-chain-subfolder',(req,res,next) => {
-	res.render('with-include-chain-subfolder.ejs',{_layoutFile:false,hello:'subchain'});
+	res.render('with-include-chain-subfolder.html',{_layoutFile:false,hello:'subchain'});
 });
 
 app.get('/with-two-includes',(req,res,next) => {
@@ -108,7 +102,7 @@ app.get('/with-absolute-sub-include',(req,res,next) => {
 });
 
 app.get('/with-include-there',(req,res,next) => {
-	res.render('with-include.ejs',{
+	res.render('with-include',{
 		_layoutFile: false
 	});
 });
@@ -275,103 +269,175 @@ describe('app',n => {
 		});
 	});
 	
-	/*
 	describe('GET /collection/thing-path',n => {
-		it('should render thing/index.ejs for every item with layout.ejs as layout',done => {
-			request(app)
-				.get('/collection/thing-path')
-				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><ul><li>one</li><li>two</li></ul></body></html>');
-					done();
-				});
-		});
+		var check = '<html><head><title>ejs-loft</title></head><body><ul>\n<li>one</li>\n<li>two</li>\n</ul>\n</body></html>\n';
+		it('should render thing/index.ejs for every item with layout.ejs as layout',done => request(app)
+			.get('/collection/thing-path')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
+		it('one more time',done => request(app)
+			.get('/collection/thing-path')
+			.end(res => {
+				res.statusCode.should.equal(200);
+				res.body.should.equal(check);
+				done();
+			}));
 	});
-
+	
 	describe('GET /collection/thing',n => {
+		var check = '<html><head><title>ejs-loft</title></head><body><ul>\n<li>one</li>\n<li>two</li>\n</ul>\n</body></html>\n';
 		it('should render thing/index.ejs for every item with layout.ejs as layout',done => {
 			request(app)
 				.get('/collection/thing')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><ul><li>one</li><li>two</li></ul></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		it('one more time',done => {
+			request(app)
+				.get('/collection/thing')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
 	describe('GET /with-layout',n => {
-		it('should use layout.ejs when rendering with-layout.ejs',done => {
+		var check = '<html><head><title>ejs-loft</title></head><body><h1>Index</h1>\n</body></html>\n';
+		it('should use layout.html when rendering with-layout.html',done => {
 			request(app)
 				.get('/with-layout')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>Index</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		
+		it('one more time',done => {
+			request(app)
+				.get('/with-layout')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
 	describe('GET /with-layout-override',n => {
-		it('should use layout.ejs when rendering with-layout.ejs, even if layout=false in options',done => {
+		// this test and functionality differs from original ejs-locals.
+		// I believe options should be preferred instead of template layout when layout settings passed
+		var check = '<h1>Index</h1>\n';
+		it('should not use layout when rendering with-layout.html, even if template has layout specified in code',done => {
 			request(app)
 				.get('/with-layout-override')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>Index</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		
+		it('one more time',done => {
+			request(app)
+				.get('/with-layout-override')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
 
 	describe('GET /with-include-here',n => {
-		it('should include and interpolate locals.ejs when rendering with-include.ejs',done => {
+		var check = '<html><head><title>ejs-loft</title></head><body><h1>here</h1></body></html>\n';
+		it('should include and interpolate locals.html when rendering with-include.html',done => {
 			request(app)
 				.get('/with-include-here')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>here</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		
+		it('one more time',done => {
+			request(app)
+				.get('/with-include-here')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
 	describe('GET /with-include-there',n => {
-		it('should include and interpolate locals.ejs when rendering with-include.ejs',done => {
+		var check = '<html><head><title>ejs-loft</title></head><body><h1>there</h1></body></html>\n';
+		it('should include and interpolate locals.html when rendering with-include.html',done => {
 			request(app)
 				.get('/with-include-there')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>there</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		it('one more time',done => {
+			request(app)
+				.get('/with-include-there')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
 	describe('GET /with-include-chain',n => {
-		it('should include and interpolate include-chain-2.ejs when rendering with-include-chain.ejs',done => {
+		var check = '<html><head><title>ejs-loft-include</title></head><body><h1>chain</h1></body></html>\n';
+		it('should include and interpolate include-chain-2.html when rendering with-include-chain.html',done => {
 			request(app)
 				.get('/with-include-chain')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals-include</title></head><body><h1>chain</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		it('one more time',done => {
+			request(app)
+				.get('/with-include-chain')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
 	describe('GET /with-include-chain-subfolder',n => {
-		it('should include and interpolate parent-include-chain.ejs when rendering with-include-chain-subfolder.ejs',done => {
+		var check = '<html><head><title>ejs-loft-include-sub</title></head><body><h1>subchain</h1></body></html>\n';
+		it('should include and interpolate parent-include-chain.html when rendering with-include-chain-subfolder.html',done => {
 			request(app)
 				.get('/with-include-chain-subfolder')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals-include-sub</title></head><body><h1>subchain</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
+	/*
 	describe('GET /with-two-includes',n => {
 		it('should include both files and interpolate the same data',done => {
 			request(app)

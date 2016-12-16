@@ -5,7 +5,10 @@ var ejs = require('ejs'),
 	exists = fs.existsSync || path.existsSync;
 
 // TODO: fix tests
+// TODO: in old tests there's no all these newlines, check how it works.
+// TODO: include should include templates with default extension, not only ejs
 // TODO: static files last edited timestamps
+// TODO: location of properties right inside options create problems, i can't use reserved names inside templates.
 module.exports = function renderFile(file,options,fn){
 	if(!options.blocks){
 		options.blocks = {};
