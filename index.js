@@ -14,11 +14,12 @@ module.exports = function renderFile(file,options,fn){
 		options.blocks = {};
 		options.block = block.bind(options.blocks);
 		options.scripts = new Block();
-		options.js = js.bind(options.scripts);
+		options.script = options.js = js.bind(options.scripts);
 		options.stylesheets = new Block();
-		options.css = css.bind(options.stylesheets);
+		options.stylesheet = options.css = css.bind(options.stylesheets);
 		options.layout = layout.bind(options);
 		options.partial = partial.bind(options);
+		options.localsName = 'locals._locals';
 	}
 	
 	options.filename = file;
@@ -195,6 +196,7 @@ function block(name,html){
 function attributes(obj){
 	return Object
 		.keys(obj)
+		.sort()
 		.map(k => obj[k] === null ? k : `${k}="${obj[k]}"`)
 		.join(' ');
 }
@@ -216,4 +218,3 @@ function js(){
 		this.append(`<script ${attributes(script)}></script>`);
 	}
 }
-

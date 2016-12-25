@@ -1,5 +1,6 @@
 var express = require('express'),
 	request = require('./support/http'),
+	omt = 'One more time',
 	
 // Test application
 	log = res => (err,html) => {
@@ -16,7 +17,10 @@ app
 	.engine('html',engine)
 	.set('view engine','html')
 	.set('views',__dirname + '/fixtures')
-	.set('view options',{views:__dirname+'/fixtures'});
+	.set('view options',{
+		views: __dirname+'/fixtures',
+		localsName: '_locals.locals'
+	});
 
 app.locals.hello = 'there';
 app.locals._layoutFile = 'layout';
@@ -77,21 +81,21 @@ app.get('/with-include-chain',(req,res,next) => {
 });
 
 app.get('/with-include-chain-subfolder',(req,res,next) => {
-	res.render('with-include-chain-subfolder.html',{_layoutFile:false,hello:'subchain'});
+	res.render('with-include-chain-subfolder',{_layoutFile:false,hello:'subchain'});
 });
 
 app.get('/with-two-includes',(req,res,next) => {
-	res.render('with-two-includes.ejs',{
+	res.render('with-two-includes',{
 		_layoutFile: false,
 		hello: 'hello'
 	});
 });
 
 app.get('/with-absolute-include',(req,res,next) => {
-	res.render('with-absolute-include.ejs',{
+	res.render('with-absolute-include',{
 		_layoutFile: false,
 		hello: 'hello'
-	});
+	},log(res));
 });
 
 app.get('/with-absolute-sub-include',(req,res,next) => {
@@ -108,35 +112,33 @@ app.get('/with-include-there',(req,res,next) => {
 });
 
 app.get('/with-blocks',(req,res,next) => {
-	res.render('with-blocks.ejs',{
-		_layoutFile: false
-	});
+	res.render('with-blocks',{_layoutFile:null});
 });
 
 app.get('/deep-inheritance',(req,res,next) => {
-	res.render('inherit-grandchild.ejs');
+	res.render('inherit-grandchild.html',{_layoutFile:null});
 });
 
 app.get('/deep-inheritance-blocks',(req,res,next) => {
-	res.render('inherit-grandchild-blocks.ejs');
+	debugger;
+	res.render('inherit-grandchild-blocks',{_layoutFile:null},log(res));
 });
 
 app.get('/subfolder/subitem',(req,res,next) => {
-	res.render('subfolder/subitem.ejs');
+	res.render('subfolder/subitem');
 });
 
 app.get('/subfolder/subitem-with-layout',(req,res,next) => {
-	res.render('subfolder/subitem-with-layout.ejs');
+	res.render('subfolder/subitem-with-layout',{_layoutFile:null});
 });
 
 app.get('/non-existent-partial',(req,res,next) => {
-	res.render('non-existent-partial.ejs');
+	res.render('non-existent-partial',{_layoutFile:null});
 });
 
+// ejs doesn't support filter functionality since 2.0
 app.get('/filters',(req,res,next) => {
-	res.render('filters.ejs',{
-		hello: 'hello'
-	});
+	res.render('filters',{hello:'hello'},log(res));
 });
 
 // since ejs 2.0 filters is not there anymore
@@ -155,6 +157,7 @@ app.use((err,req,res,next) => {
 
 /*global describe it */
 describe('app',n => {
+	/*
 	describe('Render template. Layout specified in code.',n => {
 		var check = '<html><head><title>ejs-loft</title></head><body><h1>HTMLIndex</h1>\n</body></html>\n';
 		it('Should render with layout - layout.html',done => request(app)
@@ -164,7 +167,7 @@ describe('app',n => {
 				res.body.should.equal(check);
 				done();
 			}));
-		it('one more time',done => request(app)
+		it(omt,done => request(app)
 			.get('/')
 			.end(res => {
 				res.statusCode.should.equal(200);
@@ -182,7 +185,7 @@ describe('app',n => {
 				res.body.should.equal(check);
 				done();
 			}));
-		it('one more time',done => request(app)
+		it(omt,done => request(app)
 			.get('/blog')
 			.end(res => {
 				res.statusCode.should.equal(200);
@@ -201,7 +204,7 @@ describe('app',n => {
 				done();
 			}));
 		
-		it('one more time',done => request(app)
+		it(omt,done => request(app)
 			.get('/res-locals')
 			.end(res => {
 				res.statusCode.should.equal(200);
@@ -220,7 +223,7 @@ describe('app',n => {
 				done();
 			}));
 		
-		it('one more time',done => request(app)
+		it(omt,done => request(app)
 			.get('/app-locals')
 			.end(res => {
 				res.statusCode.should.equal(200);
@@ -238,7 +241,7 @@ describe('app',n => {
 				res.body.should.equal(check);
 				done();
 			}));
-		it('one more time',done => request(app)
+		it(omt,done => request(app)
 			.get('/mobile')
 			.end(res => {
 				res.statusCode.should.equal(200);
@@ -258,7 +261,7 @@ describe('app',n => {
 					done();
 				});
 		});
-		it('one more time',done => {
+		it(omt,done => {
 			request(app)
 				.get('/collection/_entry')
 				.end(res => {
@@ -278,7 +281,7 @@ describe('app',n => {
 				res.body.should.equal(check);
 				done();
 			}));
-		it('one more time',done => request(app)
+		it(omt,done => request(app)
 			.get('/collection/thing-path')
 			.end(res => {
 				res.statusCode.should.equal(200);
@@ -298,7 +301,7 @@ describe('app',n => {
 					done();
 				});
 		});
-		it('one more time',done => {
+		it(omt,done => {
 			request(app)
 				.get('/collection/thing')
 				.end(res => {
@@ -321,7 +324,7 @@ describe('app',n => {
 				});
 		});
 		
-		it('one more time',done => {
+		it(omt,done => {
 			request(app)
 				.get('/with-layout')
 				.end(res => {
@@ -346,7 +349,7 @@ describe('app',n => {
 				});
 		});
 		
-		it('one more time',done => {
+		it(omt,done => {
 			request(app)
 				.get('/with-layout-override')
 				.end(res => {
@@ -369,7 +372,7 @@ describe('app',n => {
 				});
 		});
 		
-		it('one more time',done => {
+		it(omt,done => {
 			request(app)
 				.get('/with-include-here')
 				.end(res => {
@@ -391,7 +394,7 @@ describe('app',n => {
 					done();
 				});
 		});
-		it('one more time',done => {
+		it(omt,done => {
 			request(app)
 				.get('/with-include-there')
 				.end(res => {
@@ -403,7 +406,7 @@ describe('app',n => {
 	});
 	
 	describe('GET /with-include-chain',n => {
-		var check = '<html><head><title>ejs-loft-include</title></head><body><h1>chain</h1></body></html>\n';
+		var check = '<html><head><title>ejs-loft-include</title></head><body><h1>chain</h1>\n</body></html>\n';
 		it('should include and interpolate include-chain-2.html when rendering with-include-chain.html',done => {
 			request(app)
 				.get('/with-include-chain')
@@ -413,7 +416,7 @@ describe('app',n => {
 					done();
 				});
 		});
-		it('one more time',done => {
+		it(omt,done => {
 			request(app)
 				.get('/with-include-chain')
 				.end(res => {
@@ -435,123 +438,185 @@ describe('app',n => {
 					done();
 				});
 		});
+		
+		it(omt,done => {
+			request(app)
+				.get('/with-include-chain-subfolder')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
 	});
 	
-	/*
 	describe('GET /with-two-includes',n => {
+		var check = '<html><head><title>ejs-loft-two-includes</title></head><body><h1>hello</h1><h1>Index</h1></body></html>\n';
 		it('should include both files and interpolate the same data',done => {
 			request(app)
 				.get('/with-two-includes')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals-two-includes</title></head><body><h1>hello</h1><h1>Index</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
-	});
-
-	describe('GET /with-absolute-include',n => {
-		it('should include locals.ejs and interpolate the data correctly',done => {
+		it(omt,done => {
 			request(app)
-				.get('/with-absolute-include')
+				.get('/with-two-includes')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals-abs</title></head><body><h1>hello</h1></body></html>');
-					done();
-				});
-		});
-	});
-
-	describe('GET /with-absolute-sub-include',n => {
-		it('should include subfolder/sublocals.ejs and include subfolder/subitem.ejs correctly',done => {
-			request(app)
-				.get('/with-absolute-sub-include')
-				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals-abs-sub</title></head><body><h1>Index</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
 
 	describe('GET /with-blocks',n => {
+		var check = '<li><a href="hello.html">there</a></li><p>What\'s up?</p>© 2012\n';
 		it('should arrange blocks into layout-with-blocks.ejs when rendering with-blocks.ejs',done => {
 			request(app)
 				.get('/with-blocks')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<li><a href="hello.html">there</a></li><p>What\'s up?</p>© 2012');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		
+		it(omt,done => {
+			request(app)
+				.get('/with-blocks')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
 
 	describe('GET /deep-inheritance',n => {
+		var check = '<html><head><title>ejs-loft</title></head><body><i>I am grandchild content.</i>\n<b>I am child content.</b>\n<u>I am parent content.</u></body></html>\n';
 		it('should recurse and keep applying layouts until done',done => {
 			request(app)
 				.get('/deep-inheritance')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><i>I am grandchild content.</i><b>I am child content.</b><u>I am parent content.</u></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		it(omt,done => {
+			request(app)
+				.get('/deep-inheritance')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
+	*/
 
 	describe('GET /deep-inheritance-blocks',n => {
+		var check = '<html><head><title>ejs-loft</title><script src="gc.js"></script>\n<script src="c.js"></script><link href="gc.css" rel="stylesheet" type="text/css" />\n<link href="c.css" rel="stylesheet" type="text/css" /></head><body><i>I am grandchild content.</i>\n<b>I am child content.</b>\n<u>I am parent content.</u></body></html>\n';
 		it('should recurse and keep applying blocks to layouts until done',done => {
 			request(app)
 				.get('/deep-inheritance-blocks')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title><script src="gc.js"></script>\n<script src="c.js"></script><link rel="stylesheet" href="gc.css" />\n<link rel="stylesheet" href="c.css" /></head><body><i>I am grandchild content.</i><b>I am child content.</b><u>I am parent content.</u></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		
+		it(omt,done => {
+			request(app)
+				.get('/deep-inheritance-blocks')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
 
 	describe('GET /subfolder/subitem',n => {
-		it('should render subfolder/subitem.ejs and still use layout.ejs',done => {
+		var check = '<html><head><title>ejs-loft</title></head><body><h1>Index</h1>\n</body></html>\n';
+		it('should render subfolder/subitem.html and still use layout.html',done => {
 			request(app)
 				.get('/subfolder/subitem')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>Index</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		
+		it(omt,done => {
+			request(app)
+				.get('/subfolder/subitem')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
 
 	describe('GET /subfolder/subitem-with-layout',n => {
-		it('should render subitem-with-layout.ejs using sub-layout.ejs',done => {
+		var check = '<html><head><title>ejs-loft sub-layout</title></head><body><h1>Index</h1>\n</body></html>\n';
+		it('should render subitem-with-layout.html using sub-layout.html',done => {
 			request(app)
 				.get('/subfolder/subitem-with-layout')
 				.end(res => {
-					res.should.have.status(200);
-					res.body.should.equal('<html><head><title>ejs-locals sub-layout</title></head><body><h1>Index</h1></body></html>');
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+		
+		it(omt,done => {
+			request(app)
+				.get('/subfolder/subitem-with-layout')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
 					done();
 				});
 		});
 	});
-
+	
 	describe('GET /non-existent-partial',n => {
 		it('should send 500 and error saying a partial was not found',done => {
 			request(app)
 				.get('/non-existent-partial')
 				.end(res => {
-					res.should.have.status(500);
-					res.body.should.include('Could not find partial non-existent');
+					res.statusCode.should.equal(500);
+					res.body.should.containEql('Could not find partial non-existent');
+					done();
+				});
+		});
+		
+		it(omt,done => {
+			request(app)
+				.get('/non-existent-partial')
+				.end(res => {
+					res.statusCode.should.equal(500);
+					res.body.should.containEql('Could not find partial non-existent');
 					done();
 				});
 		});
 	});
 
+	/*
+	 * filters don't work since 2.0
 	describe('GET /filters',n => {
 		it('should allow use of default ejs filters like upcase',done => {
 			request(app)
 				.get('/filters')
 				.end(res => {
-					res.should.have.status(200);
+					res.statusCode.should.equal(200);
 					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>HELLO</h1></body></html>');
 					done();
 				});
@@ -563,8 +628,34 @@ describe('app',n => {
 			request(app)
 				.get('/filters-custom')
 				.end(res => {
-					res.should.have.status(200);
+					res.statusCode.should.equal(200);
 					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>HELLO</h1><h1>(hello)</h1></body></html>');
+					done();
+				});
+		});
+	});
+		
+	// I'm not sure about this. Use relative paths guys!
+	describe('GET /with-absolute-include',n => {
+		var check = '<html><head><title>ejs-loft-abs</title></head><body><h1>hello</h1></body></html>\n';
+		it('should include locals.html and interpolate the data correctly',done => {
+			request(app)
+				.get('/with-absolute-include')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal(check);
+					done();
+				});
+		});
+	});
+	
+	describe('GET /with-absolute-sub-include',n => {
+		it('should include subfolder/sublocals.ejs and include subfolder/subitem.ejs correctly',done => {
+			request(app)
+				.get('/with-absolute-sub-include')
+				.end(res => {
+					res.statusCode.should.equal(200);
+					res.body.should.equal('<html><head><title>ejs-locals-abs-sub</title></head><body><h1>Index</h1></body></html>');
 					done();
 				});
 		});
