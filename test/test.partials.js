@@ -19,7 +19,7 @@ app
 	.set('views',__dirname + '/fixtures')
 	.set('view options',{
 		views: __dirname+'/fixtures',
-		localsName: '_locals.locals'
+		public_html: __dirname+'/public'
 	});
 
 app.locals.hello = 'there';
@@ -120,7 +120,6 @@ app.get('/deep-inheritance',(req,res,next) => {
 });
 
 app.get('/deep-inheritance-blocks',(req,res,next) => {
-	debugger;
 	res.render('inherit-grandchild-blocks',{_layoutFile:null},log(res));
 });
 
@@ -150,10 +149,13 @@ app.get('/filters-custom',(req,res,next) => {
 	});
 });
 
+app.get('/cached_css',(req,res,next) => {
+	res.render('cached_css');
+});
+
 app.use((err,req,res,next) => {
 	res.status(500).send(err.stack);
 });
-
 
 /*global describe it */
 describe('app',n => {
@@ -608,57 +610,26 @@ describe('app',n => {
 				});
 		});
 	});
-
-	/*
-	 * filters don't work since 2.0
-	describe('GET /filters',n => {
-		it('should allow use of default ejs filters like upcase',done => {
-			request(app)
-				.get('/filters')
-				.end(res => {
-					res.statusCode.should.equal(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>HELLO</h1></body></html>');
-					done();
-				});
-		});
-	});
-
-	describe('GET /filters-custom',n => {
-		it('should allow use of custom ejs filters like embrace',done => {
-			request(app)
-				.get('/filters-custom')
-				.end(res => {
-					res.statusCode.should.equal(200);
-					res.body.should.equal('<html><head><title>ejs-locals</title></head><body><h1>HELLO</h1><h1>(hello)</h1></body></html>');
-					done();
-				});
-		});
-	});
-		
-	// I'm not sure about this. Use relative paths guys!
-	describe('GET /with-absolute-include',n => {
-		var check = '<html><head><title>ejs-loft-abs</title></head><body><h1>hello</h1></body></html>\n';
-		it('should include locals.html and interpolate the data correctly',done => {
-			request(app)
-				.get('/with-absolute-include')
-				.end(res => {
-					res.statusCode.should.equal(200);
-					res.body.should.equal(check);
-					done();
-				});
-		});
-	});
 	
-	describe('GET /with-absolute-sub-include',n => {
-		it('should include subfolder/sublocals.ejs and include subfolder/subitem.ejs correctly',done => {
+	describe('GET /cached_css',n => {
+		it('should send 500 and error saying a partial was not found',done => {
 			request(app)
-				.get('/with-absolute-sub-include')
+				.get('/cached_css')
 				.end(res => {
-					res.statusCode.should.equal(200);
-					res.body.should.equal('<html><head><title>ejs-locals-abs-sub</title></head><body><h1>Index</h1></body></html>');
+					res.statusCode.should.equal(500);
+					res.body.should.containEql('Could not find partial non-existent');
+					done();
+				});
+		});
+		
+		it(omt,done => {
+			request(app)
+				.get('/non-existent-partial')
+				.end(res => {
+					res.statusCode.should.equal(500);
+					res.body.should.containEql('Could not find partial non-existent');
 					done();
 				});
 		});
 	});
-	*/
 });
