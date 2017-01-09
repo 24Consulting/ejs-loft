@@ -1,3 +1,4 @@
 node_modules
 npm-debug.log
-*.swp
+[1-9].js
+*.sw*

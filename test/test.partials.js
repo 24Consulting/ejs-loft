@@ -1,8 +1,6 @@
 var express = require('express'),
 	request = require('./support/http'),
 	omt = 'One more time',
-	
-// Test application
 	log = res => (err,html) => {
 		if(err){
 			console.log(err);
@@ -136,22 +134,21 @@ app.get('/non-existent-partial',(req,res,next) => {
 });
 
 // ejs doesn't support filter functionality since 2.0
+/*
 app.get('/filters',(req,res,next) => {
 	res.render('filters',{hello:'hello'},log(res));
 });
-
-// since ejs 2.0 filters is not there anymore
 // ejs.filters.embrace = s => `(${s})`;
-
 app.get('/filters-custom',(req,res,next) => {
 	res.render('filters-custom.ejs',{
 		hello: 'hello'
 	});
 });
+*/
 
-app.get('/cached_css',(req,res,next) => {
-	res.render('cached_css');
-});
+app.get('/cached_css',(req,res,next) => res.render('cached_css',{_layoutFile:null},log(res)));
+
+app.get('/cached_js',(req,res,next) => res.render('cached_js',{_layoutFile:null},log(res)));
 
 app.use((err,req,res,next) => {
 	res.status(500).send(err.stack);
@@ -519,7 +516,8 @@ describe('app',n => {
 		});
 	});
 	*/
-
+	
+	/*
 	describe('GET /deep-inheritance-blocks',n => {
 		var check = '<html><head><title>ejs-loft</title><script src="gc.js"></script>\n<script src="c.js"></script><link href="gc.css" rel="stylesheet" type="text/css" />\n<link href="c.css" rel="stylesheet" type="text/css" /></head><body><i>I am grandchild content.</i>\n<b>I am child content.</b>\n<u>I am parent content.</u></body></html>\n';
 		it('should recurse and keep applying blocks to layouts until done',done => {
@@ -610,24 +608,27 @@ describe('app',n => {
 				});
 		});
 	});
+	*/
 	
 	describe('GET /cached_css',n => {
-		it('should send 500 and error saying a partial was not found',done => {
+		it('Should append css file modification timestamp as its version.',done => {
 			request(app)
 				.get('/cached_css')
 				.end(res => {
-					res.statusCode.should.equal(500);
-					res.body.should.containEql('Could not find partial non-existent');
+					res.statusCode.should.equal(200);
+					res.body.should.containEql('<link href="/css/bootstrap.css?v=');
 					done();
 				});
 		});
-		
-		it(omt,done => {
+	});
+	
+	describe('GET /cached_js',n => {
+		it('Should append javascript file modification timestamp as its version.',done => {
 			request(app)
-				.get('/non-existent-partial')
+				.get('/cached_js')
 				.end(res => {
-					res.statusCode.should.equal(500);
-					res.body.should.containEql('Could not find partial non-existent');
+					res.statusCode.should.equal(200);
+					res.body.should.containEql('<script src="/js/jquery-3.1.1.js?v=');
 					done();
 				});
 		});
